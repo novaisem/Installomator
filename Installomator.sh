@@ -732,7 +732,9 @@ checkRunningProcesses() {
                       fi
                       ;;
                     prompt_user_loop)
-                      button=$(displaydialog "Quit “$x” to continue updating? $([[ -n $appNewVersion ]] && echo "Version $appversion is installed, but version $appNewVersion is available.") (Click “Not Now” to be asked in 1 hour, or leave this open until you are ready)." "The application “$x” needs to be updated.")
+                      button=$(displaydialog "Quittez « $x » pour continuer la mise à jour. $([[ -n $appNewVersion ]] && echo "Version $appversion est installée, mais la version $appNewVersion est disponible.")
+
+Cliquez sur « Pas maintenant » pour être relancé dans 1 heure, ou laissez cette fenêtre ouverte jusqu’à ce que vous soyez prêt." "L'application « $x » doit être mise à jour.")
                       if [[ $button = "Pas maintenant" ]]; then
                         if [[ $i < 2 ]]; then
                           printlog "user wants to wait an hour"
@@ -750,7 +752,9 @@ checkRunningProcesses() {
                       fi
                       ;;
                     tell_user|tell_user_then_kill)
-                      button=$(displaydialogContinue "Quit “$x” to continue updating? (This is an important update). Wait for notification of update before launching app again." "The application “$x” needs to be updated.")
+                      button=$(displaydialogContinue "Quittez « $x » pour continuer la mise à jour (mise à jour importante).
+
+Attendez la notification de fin de mise à jour avant de rouvrir l’application." "L'application « $x » doit être mise à jour.")
                       printlog "telling app $x to quit"
                       runAsUser osascript -e "tell app \"$x\" to quit"
                       # give the user a bit of time to quit apps
@@ -852,10 +856,10 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
     if [[ -n $appNewVersion && $appversion == $appNewVersion ]]; then
         printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same as installed."
         if [[ $INSTALL != "force" ]]; then
-            message="$name, version $appNewVersion, is the latest version."
+            message="$name version $appNewVersion est déjà la dernière version."
             if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
                 printlog "notifying"
-                displaynotification "$message" "No update for $name!"
+                displaynotification "$message" "Aucune mise à jour pour $name"
             fi
             if [[ $DIALOG_CMD_FILE != "" ]]; then
                 updateDialog "wait" "Dernière version déjà installée..."
@@ -877,10 +881,10 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
         printlog "App has LSMinimumSystemVersion: $minimumOSversion"
         if ! is-at-least $minimumOSversion $installedOSversion; then
             printlog "App requires higher System Version than installed: $installedOSversion"
-            message="Cannot install $name, version $appNewVersion, as it is not compatible with the running system version."
+            message="Impossible d’installer $name version $appNewVersion : elle n’est pas compatible avec la version de macOS de ce Mac."
             if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
                 printlog "notifying"
-                displaynotification "$message" "Error updating $name!"
+                displaynotification "$message" "Erreur de mise à jour de $name"
             fi
             cleanupAndExit 15 "Installed macOS is too old for this app." ERROR
         fi
@@ -1026,10 +1030,10 @@ installFromPKG() {
         if [[ $appversion == $appNewVersion ]]; then
             printlog "Downloaded version of $name is the same as installed."
             if [[ $INSTALL != "force" ]]; then
-                message="$name, version $appNewVersion, is the latest version."
+                message="$name version $appNewVersion est déjà la dernière version."
                 if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
                     printlog "notifying"
-                    displaynotification "$message" "No update for $name!"
+                    displaynotification "$message" "Aucune mise à jour pour $name"
                 fi
                 if [[ $DIALOG_CMD_FILE != "" ]]; then
                     updateDialog "wait" "Dernière version déjà installée..."
@@ -2578,10 +2582,10 @@ if [[ -n $appNewVersion ]]; then
         if [[ $DEBUG -ne 1 ]]; then
             printlog "There is no newer version available."
             if [[ $INSTALL != "force" ]]; then
-                message="$name, version $appNewVersion, is the latest version."
+                message="$name version $appNewVersion est déjà la dernière version."
                 if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
                     printlog "notifying"
-                    displaynotification "$message" "No update for $name!"
+                    displaynotification "$message" "Aucune mise à jour pour $name"
                 fi
                 if [[ $DIALOG_CMD_FILE != "" ]]; then
                     updateDialog "complete" "Dernière version déjà installée..."
@@ -2659,13 +2663,13 @@ else
     # Trying to detect download errors, including proxy or web filter blocking on downloaded file
     if [[ $curlDownloadStatus -ne 0 || $archiveType == *ASCII* ]]; then
         printlog "error downloading $downloadURL" ERROR
-        message="$name update/installation failed. This will be logged, so IT can follow up."
+        message="La mise à jour ou l’installation de $name a échoué. L’incident est enregistré pour que le service informatique puisse intervenir."
         if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
             printlog "notifying"
             if [[ $updateDetected == "YES" ]]; then
-                displaynotification "$message" "Error updating $name"
+                displaynotification "$message" "Erreur de mise à jour de $name"
             else
-                displaynotification "$message" "Error installing $name"
+                displaynotification "$message" "Erreur d’installation de $name"
             fi
         fi
         if [[ $archiveType == *ASCII* ]]; then
