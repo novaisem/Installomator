@@ -16,9 +16,12 @@ cleanupAndExit() { # $1 = exit code, $2 message, $3 level
 
     # If we closed any processes, reopen the app again
     reopenClosedProcess
-    if [[ -n $2 && $1 -ne 0 ]]; then
+    if [[ $1 -eq 10 ]]; then
+        printlog "$2" INFO
+        updateDialog "wait" "Mise à jour reportée"
+    elif [[ -n $2 && $1 -ne 0 ]]; then
         printlog "ERROR: $2" $3
-        updateDialog "fail" "Error ($1; $2)"
+        updateDialog "fail" "Erreur ($1 ; $2)"
     else
         printlog "$2" $3
         updateDialog "success" ""
@@ -50,13 +53,13 @@ reloadAsUser() {
 displaydialog() { # $1: message $2: title
     message=${1:-"Message"}
     title=${2:-"Installomator"}
-    runAsUser osascript -e "button returned of (display dialog \"$message\" with  title \"$title\" buttons {\"Not Now\", \"Quit and Update\"} default button \"Quit and Update\" with icon POSIX file \"$LOGO\" giving up after $PROMPT_TIMEOUT)"
+    runAsUser osascript -e "button returned of (display dialog \"$message\" with  title \"$title\" buttons {\"Pas maintenant\", \"Quitter et mettre à jour\"} default button \"Quitter et mettre à jour\" with icon POSIX file \"$LOGO\" giving up after $PROMPT_TIMEOUT)"
 }
 
 displaydialogContinue() { # $1: message $2: title
     message=${1:-"Message"}
     title=${2:-"Installomator"}
-    runAsUser osascript -e "button returned of (display dialog \"$message\" with  title \"$title\" buttons {\"Quit and Update\"} default button \"Quit and Update\" with icon POSIX file \"$LOGO\")"
+    runAsUser osascript -e "button returned of (display dialog \"$message\" with  title \"$title\" buttons {\"Quitter et mettre à jour\"} default button \"Quitter et mettre à jour\" with icon POSIX file \"$LOGO\")"
 }
 
 displaynotification() { # $1: message $2: title
@@ -295,7 +298,7 @@ getAppVersion() {
                     appversion=0
                 else
                     if [[ $DIALOG_CMD_FILE != "" ]]; then
-                        updateDialog "wait" "Already installed from App Store. Not replaced."
+                        updateDialog "wait" "Déjà installée depuis l’App Store. Non remplacée."
                         sleep 4
                     fi
                     cleanupAndExit 23 "App previously installed from App Store, and we respect that" ERROR
@@ -343,13 +346,15 @@ checkRunningProcesses() {
                       sleep 5
                       ;;
                     prompt_user|prompt_user_then_kill)
-                      button=$(displaydialog "Quit “$x” to continue updating? $([[ -n $appNewVersion ]] && echo "Version $appversion is installed, but version $appNewVersion is available.") (Leave this dialogue if you want to activate this update later)." "The application “$x” needs to be updated.")
-                      if [[ $button = "Not Now" ]]; then
+                      button=$(displaydialog "Quittez « $x » pour continuer la mise à jour. $([[ -n $appNewVersion ]] && echo "Version $appversion est installée, mais la version $appNewVersion est disponible.")
+
+⚠️ Après la mise à jour, « $x » se rouvrira automatiquement." "L'application « $x » doit être mise à jour.")
+                      if [[ $button = "Pas maintenant" ]]; then
                         appClosed=0
-                        cleanupAndExit 10 "user aborted update" ERROR
+                        cleanupAndExit 0 "user aborted update" INFO
                       elif [[ $button = "" ]]; then
                         appClosed=0
-                        cleanupAndExit 25 "timed out waiting for user response" ERROR
+                        cleanupAndExit 0 "timed out waiting for user response" INFO
                       else
                         if [[ $BLOCKING_PROCESS_ACTION = "prompt_user_then_kill" ]]; then
                           # try to quit, then set to kill
@@ -371,7 +376,7 @@ checkRunningProcesses() {
                       ;;
                     prompt_user_loop)
                       button=$(displaydialog "Quit “$x” to continue updating? $([[ -n $appNewVersion ]] && echo "Version $appversion is installed, but version $appNewVersion is available.") (Click “Not Now” to be asked in 1 hour, or leave this open until you are ready)." "The application “$x” needs to be updated.")
-                      if [[ $button = "Not Now" ]]; then
+                      if [[ $button = "Pas maintenant" ]]; then
                         if [[ $i < 2 ]]; then
                           printlog "user wants to wait an hour"
                           sleep 3600 # 3600 seconds is an hour
@@ -467,7 +472,7 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
 
     # verify with spctl
     printlog "Verifying: $appPath" INFO
-    updateDialog "wait" "Verifying..."
+    updateDialog "wait" "Vérification..."
     printlog "App size: $(du -sh "$appPath")" DEBUG
     appVerify=$(spctl -a -vv "$appPath" 2>&1 )
     appVerifyStatus=$(echo $?)
@@ -496,7 +501,7 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
                 displaynotification "$message" "No update for $name!"
             fi
             if [[ $DIALOG_CMD_FILE != "" ]]; then
-                updateDialog "wait" "Latest version already installed..."
+                updateDialog "wait" "Dernière version déjà installée..."
                 sleep 2
             fi
             cleanupAndExit 0 "No new version to install" REG
@@ -621,7 +626,7 @@ installFromDMG() {
 installFromPKG() {
     # verify with spctl
     printlog "Verifying: $archiveName"
-    updateDialog "wait" "Verifying..."
+    updateDialog "wait" "Vérification..."
     printlog "File list: $(ls -lh "$archiveName")" DEBUG
     printlog "File type: $(file "$archiveName")" DEBUG
     spctlOut=$(spctl -a -vv -t install "$archiveName" 2>&1 )
@@ -670,7 +675,7 @@ installFromPKG() {
                     displaynotification "$message" "No update for $name!"
                 fi
                 if [[ $DIALOG_CMD_FILE != "" ]]; then
-                    updateDialog "wait" "Latest version already installed..."
+                    updateDialog "wait" "Dernière version déjà installée..."
                     sleep 2
                 fi
                 cleanupAndExit 0 "No new version to install" REQ
@@ -912,9 +917,9 @@ finishing() {
     getAppVersion
 
     if [[ -z $appNewVersion ]]; then
-        message="Installed $name"
+        message="$name a été installé"
     else
-        message="Installed $name, version $appNewVersion"
+        message="$name version $appNewVersion a été installé"
     fi
 
     printlog "$message" REQ
@@ -922,9 +927,9 @@ finishing() {
     if [[ $currentUser != "loginwindow" && ( $NOTIFY == "success" || $NOTIFY == "all" ) ]]; then
         printlog "notifying"
         if [[ $updateDetected == "YES" ]]; then
-            displaynotification "$message" "$name update complete!"
+            displaynotification "$message" "Mise à jour de $name terminée !"
         else
-            displaynotification "$message" "$name installation complete!"
+            displaynotification "$message" "Installation de $name terminée !"
         fi
     fi
 }
@@ -992,7 +997,7 @@ readDownloadPipe() {
         fi
 
         if [[ $char == % ]]; then
-            updateDialog $progress "Downloading..."
+            updateDialog $progress "Téléchargement..."
             progress=""
             keep=0
         fi
@@ -1018,7 +1023,7 @@ readPKGInstallPipe() {
             progress="$progress$char"
         fi
         if [[ $char == . && $keep == 1 ]]; then
-            updateDialog $progress "Installing..."
+            updateDialog $progress "Installation..."
             progress=""
             keep=0
         fi
